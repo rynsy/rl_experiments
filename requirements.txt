@@ -1,0 +1,5 @@
+facenet-pytorch==2.2.9
+pandas==0.25.3
+mmcv==0.5.9
+opencv-python==4.2.0.34
+gym-sokoban==0.0.6
