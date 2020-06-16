@@ -1,2 +1,8 @@
-* Map share with Docker Toolkit so you can edit the file elsewhere and share it to the docker container.
+TODO:
+Add demos of the following algorithms:
+* PPO2
+* A2C
+* DQN (Double-Q as well)
+* Deep Sarsa
 
+Plot Running Average against episode number and compare learning rates of each algorithm

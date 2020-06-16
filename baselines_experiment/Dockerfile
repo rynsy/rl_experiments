@@ -12,4 +12,4 @@ COPY . /workspace
 RUN pip3 install --upgrade pip
 RUN pip3 install -r /workspace/requirements.txt
 #RUN pip3 install git+git://github.com/openai/spinningup.git
-#RUN python3 ddpg.py
+RUN python3 ddpg.py
