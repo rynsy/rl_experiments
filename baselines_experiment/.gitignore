@@ -1,2 +1,5 @@
 .sokoban_cache/
 *.zip
+.a2c
+.ppo
+.dqn
