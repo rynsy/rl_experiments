@@ -1,14 +1,14 @@
 import gym
 import gym_sokoban
 
-from stable_baselines.common.policies import CnnLnLstmPolicy 
+from stable_baselines.common.policies import MlpPolicy 
 from stable_baselines.common import make_vec_env
 from stable_baselines import A2C
 
 # Parallel environments
-env = make_vec_env('Boxoban-Train-v0', n_envs=9)
+env = make_vec_env('Sokoban-small-v0', n_envs=9)
 
-model = A2C(CnnLnLstmPolicy, env, verbose=1, tensorboard_log=".a2c/")
+model = A2C(MlpPolicy, env, verbose=1, tensorboard_log=".a2c/")
 model.learn(total_timesteps=1_000_000)
 model.save(".a2c/a2c_boxoban")
 
