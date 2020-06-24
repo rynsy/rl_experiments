@@ -1,0 +1,58 @@
+diff --git a/gym_sokoban/envs/sokoban_env.py b/gym_sokoban/envs/sokoban_env.py
+index 3025d3e..ccf9bf5 100644
+--- a/gym_sokoban/envs/sokoban_env.py
++++ b/gym_sokoban/envs/sokoban_env.py
+@@ -6,6 +6,7 @@ from .room_utils import generate_room
+ from .render_utils import room_to_rgb, room_to_tiny_world_rgb
+ import numpy as np
+ 
++from copy import deepcopy
+ 
+ class SokobanEnv(gym.Env):
+     metadata = {
+@@ -42,7 +43,13 @@ class SokobanEnv(gym.Env):
+         self.action_space = Discrete(len(ACTION_LOOKUP))
+         screen_height, screen_width = (dim_room[0] * 16, dim_room[1] * 16)
+         self.observation_space = Box(low=0, high=255, shape=(screen_height, screen_width, 3), dtype=np.uint8)
+-        
++       
++        # back-up data for maintaining a persistent level between tests
++        self.initialized = False
++        self.room_fixed_backup = None
++        self.room_state_backup = None
++        self.box_mapping_backup = None
++
+         if reset:
+             # Initialize Room
+             _ = self.reset()
+@@ -198,14 +205,23 @@ class SokobanEnv(gym.Env):
+     def _check_if_maxsteps(self):
+         return (self.max_steps == self.num_env_steps)
+ 
+-    def reset(self, second_player=False, render_mode='rgb_array'):
++    def reset(self, second_player=False, render_mode='rgb_array', regenerate=False):
+         try:
+-            self.room_fixed, self.room_state, self.box_mapping = generate_room(
+-                dim=self.dim_room,
+-                num_steps=self.num_gen_steps,
+-                num_boxes=self.num_boxes,
+-                second_player=second_player
+-            )
++            if self.initialized == False and regnerate == False:
++                self.room_fixed, self.room_state, self.box_mapping = generate_room(
++                    dim=self.dim_room,
++                    num_steps=self.num_gen_steps,
++                    num_boxes=self.num_boxes,
++                    second_player=second_player
++                )
++                self.room_fixed_backup = deepcopy(self.room_fixed)
++                self.room_state_backup = deepcopy(self.room_state)
++                self.box_mapping_backup = deepcopy(self.box_mapping)
++                self.initialized = True
++            else:
++                self.room_fixed = deepcopy(self.room_fixed_backup)
++                self.room_state = deepcopy(self.room_state_backup)
++                self.box_mapping = deepcopy(self.box_mapping_backup)
+         except (RuntimeError, RuntimeWarning) as e:
+             print("[SOKOBAN] Runtime Error/Warning: {}".format(e))
+             print("[SOKOBAN] Retry . . .")
