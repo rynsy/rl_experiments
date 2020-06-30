@@ -6,7 +6,7 @@ from stable_baselines.common import make_vec_env
 from stable_baselines import PPO2
 
 # Parallel environments
-env = make_vec_env('Boxoban-Train-v0', n_envs=8)
+env = make_vec_env('Sokoban-small-v0', n_envs=8)
 
 model = PPO2(MlpLnLstmPolicy, env, verbose=1, tensorboard_log=".ppo/")
 model.learn(total_timesteps=1_000_000)
