@@ -7,41 +7,23 @@ tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
 
 from stable_baselines.deepq.policies import LnCnnPolicy 
 from stable_baselines.common.vec_env import DummyVecEnv 
-from stable_baselines import DQN
-from stable_baselines.common.callbacks import EvalCallback, StopTrainingOnRewardThreshold, CheckpointCallback, CallbackList
- 
+from stable_baselines import DQN, HER
+from stable_baselines.her import GoalSelectionStrategy, HERGoalEnvWrapper
+
+
+""" 
+        TODO: Wrap-up/modify environment to use HER library
+"""
+
 path = F".dqn/" 
 model_path = path + "MODEL/"
 graph_path = path + "GRAPH/"
 pre_trained_path = model_path + "pretrained_dqn"
 MAX_STEPS = 10_000
 
-env = gym.make('Sokoban-small-v0')
-
 def new_model(env):
-    model = DQN(LnCnnPolicy, env,
-                tensorboard_log=graph_path,
-                double_q=True,
-                prioritized_replay=True,
-                prioritized_replay_alpha=0.99,
-                exploration_fraction=0.5,
-                learning_starts=MAX_STEPS * 0.5,
-                verbose=1
-            )
+    model = HER('LnCnnPolicy', env, DQN, n_sampled_goal=4, goal_selection_strategy='future', verbose=1)
     return model
-
-def pre_trained_model(env):
-    model = DQN(LnCnnPolicy, env,
-                tensorboard_log=graph_path,
-                double_q=True,
-                prioritized_replay=True,
-                prioritized_replay_alpha=0.99,
-                learning_starts=MAX_STEPS * 0.5,
-                verbose=1
-            )
-    model.load(pre_trained_path) 
-    return model
-
 
 def test_model(env, model, regen=False):
   test_rewards = []
@@ -85,7 +67,3 @@ if __name__ == "__main__":
     env = gym.make('Sokoban-small-v0')
     model = new_model(env)
     single_boards(env, model)
-    #print("Testing untrained model")
-    #test_model(env,model, regen=False)
-    #print("Starting training")
-    #single_boards(model)
