@@ -9,11 +9,11 @@ from stable_baselines.common.policies import CnnPolicy
 from stable_baselines.common.evaluation import evaluate_policy
 from stable_baselines.common.vec_env import SubprocVecEnv, DummyVecEnv
 from stable_baselines.common import set_global_seeds
-from stable_baselines import A2C
+from stable_baselines import PPO2
 
 env_id = 'MiniGrid-DoorKey-16x16-v0'
 max_steps = 1_000_000
-log_dir = ".a2c/"
+log_dir = ".ppo/"
 num_cpu = 8
 parallel = True
 
@@ -34,12 +34,12 @@ if __name__ == "__main__":
     else:
         env = DummyVecEnv([make_env(env_id, i) for i in range(num_cpu)])
 
-    model = A2C(CnnPolicy, env, verbose=1, tensorboard_log=log_dir)
+    model = PPO2(CnnPolicy, env, verbose=1, tensorboard_log=log_dir)
     model.learn(total_timesteps=max_steps)
-    model.save(log_dir + "a2c_minigrid")
+    model.save(log_dir + "ppo_minigrid")
     del model # remove to demonstrate saving and loading
 
-    model = A2C.load(log_dir + "a2c_minigrid")
+    model = PPO2.load(log_dir + "ppo_minigrid")
     env = make_env(env_id, 0)()
 
     mean_reward, std_reward = evaluate_policy(model, env)
