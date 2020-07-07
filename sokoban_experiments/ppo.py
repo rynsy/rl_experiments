@@ -1,15 +1,17 @@
 import gym
 import gym_sokoban
+import tensorflow as tf
+tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
 
-from stable_baselines.common.policies import MlpLnLstmPolicy 
+from stable_baselines.common.policies import CnnLstmPolicy 
 from stable_baselines.common import make_vec_env
 from stable_baselines import PPO2
 
 # Parallel environments
 env = make_vec_env('Sokoban-small-v0', n_envs=8)
 
-model = PPO2(MlpLnLstmPolicy, env, verbose=1, tensorboard_log=".ppo/")
-model.learn(total_timesteps=1_000_000)
+model = PPO2(CnnLstmPolicy, env, verbose=1, tensorboard_log=".ppo/")
+model.learn(total_timesteps=10_000_000)
 model.save(".ppo/ppo_boxoban")
 
 del model # remove to demonstrate saving and loading
