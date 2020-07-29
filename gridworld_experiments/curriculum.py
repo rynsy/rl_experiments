@@ -24,7 +24,7 @@ env_ids = [
 num_cpu = 4
 max_steps = 500_000
 log_dir = ".a2c/"
-model_dir = ".a2c/"
+data_dir = ".a2c/"
 model_name = "latest_model"
 verbose = 0
 parallel = True
@@ -33,12 +33,15 @@ pretrained = False
 pretrained_model = ".a2c/a2c_6x6.zip"
 performance_data = {}
 performance_file = "training-output.json"
+output_file = "training-output.txt"
 eval_step = 0
 
 
 if __name__ == "__main__":
     def write_out(text):
         print(text)
+        with open(data_dir + output_file, "a") as outfile:
+            outfile.write(text)
 
     def make_env(env_id, rank, seed=0):
         def _init():
@@ -64,7 +67,10 @@ if __name__ == "__main__":
         else:
             return env, reward_env, None
 
-    def eval_model(model, i=0):
+    def eval_model(model, i):
+        global eval_step
+        success = True
+        performance_data[eval_step] = {}
         for j in range(i+1):
             env_id = env_ids[j]
             write_out("[MODEL EVAL]\tTesting learner on env: {}".format(env_id))
@@ -75,15 +81,14 @@ if __name__ == "__main__":
             
             fresh_mean, fresh_std = evaluate_policy(fresh_model, eval_env, n_eval_episodes=100)
             model_mean, model_std = evaluate_policy(model, eval_env, n_eval_episodes=100)
-            performance_data[eval_step] = {
-                                            'env_id'        : env_id,
-                                            'baseline_mean' : fresh_mean,
-                                            'baseline_std'  : fresh_std,
-                                            'model_mean'    : model_mean,
-                                            'model_std'     : model_std,
-                                            'steps'         : max_steps
+            performance_data[eval_step][env_id] = {
+                                            'baseline_mean'                 : fresh_mean,
+                                            'baseline_std'                  : fresh_std,
+                                            'model_mean'                    : model_mean,
+                                            'model_std'                     : model_std,
+                                            'baseline_training_steps'       : max_steps,
+                                            'eval_episodes'                 : 100
                                             } 
-            eval_step += 1
             write_out("[MODEL EVAL: LEARNER]\t env_id: {}, Mean Reward: {}, std_dev: {}".format(env_id, model_mean, model_std))
             write_out("[MODEL EVAL: BASELINE]\t env_id: {}, Mean Reward: {}, std_dev: {}".format(env_id, fresh_mean, fresh_std))
             
@@ -92,8 +97,9 @@ if __name__ == "__main__":
                 write_out("[TEST RESULT]\tmodel out-performs fresh model for env: {}, diff: {}".format(env_id,round(model_mean - model_std, 3) - round(fresh_mean - fresh_std, 3)))
             else:
                 write_out("[TEST RESULT]\tmodel DID NOT out-perform fresh model for env: {}, diff: {}".format(env_id,round(model_mean - model_std, 3) - round(fresh_mean - fresh_std, 3)))
-                return False
-        return True
+                success = False
+        eval_step += 1
+        return success
 
     i = 0
     env_id = env_ids[i]
@@ -114,8 +120,8 @@ if __name__ == "__main__":
         mean_reward, std_reward = evaluate_policy(model, eval_env)
         write_out("[TRAINING: FINISH]\tID: {}, Mean Reward: {}, std_dev: {}".format(env_id, mean_reward, std_reward))
         if eval_model(model, i):
-            model.save(model_dir + model_name)
-            with open(performance_file, 'w') as outfile:
+            model.save(data_dir + model_name)
+            with open(data_dir + performance_file, 'w') as outfile:
                 json.dump(performance_data, outfile)
             i += 1
         else:
