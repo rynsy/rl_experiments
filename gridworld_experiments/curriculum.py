@@ -2,7 +2,7 @@ import gym
 import gym_minigrid
 from gym_minigrid.wrappers import *
 
-import os
+import os, json
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import tensorflow as tf
 tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
@@ -31,8 +31,15 @@ parallel = True
 terminate_early = False
 pretrained = False
 pretrained_model = ".a2c/a2c_6x6.zip"
+performance_data = {}
+performance_file = "training-output.json"
+eval_step = 0
+
 
 if __name__ == "__main__":
+    def write_out(text):
+        print(text)
+
     def make_env(env_id, rank, seed=0):
         def _init():
             env = gym.make(env_id)
@@ -58,22 +65,33 @@ if __name__ == "__main__":
             return env, reward_env, None
 
     def eval_model(model, i=0):
-        for j in range(i):
+        for j in range(i+1):
             env_id = env_ids[j]
-            print("[MODEL EVALUATION] evaluating model for env: {}".format(env_id))
+            write_out("[MODEL EVAL]\tTesting learner on env: {}".format(env_id))
             env, eval_env, eval_callback = init_env(env_id)
 
-            fresh_model = A2C(CnnPolicy, env, verbose=verbose, tensorboard_log=log_dir)
+            fresh_model = A2C(CnnPolicy, env, verbose=verbose)
             fresh_model.learn(total_timesteps=max_steps, callback=eval_callback)
             
             fresh_mean, fresh_std = evaluate_policy(fresh_model, eval_env, n_eval_episodes=100)
             model_mean, model_std = evaluate_policy(model, eval_env, n_eval_episodes=100)
-            print("[MODEL EVALUATION] model: current_model, env_id: {}, Mean Reward: {}, std_dev: {}".format(env_id, model_mean, model_std))
-            print("[MODEL EVALUATION] model: fresh_model, env_id: {}, Mean Reward: {}, std_dev: {}".format(env_id, fresh_mean, fresh_std))
-            if round(model_mean - model_std, 3) >= round(fresh_mean - fresh_std, 3):
-                print("[MODEL EVALUATION] model out-performs fresh model for env: {}".format(env_id))
+            performance_data[eval_step] = {
+                                            'env_id'        : env_id,
+                                            'baseline_mean' : fresh_mean,
+                                            'baseline_std'  : fresh_std,
+                                            'model_mean'    : model_mean,
+                                            'model_std'     : model_std,
+                                            'steps'         : max_steps
+                                            } 
+            eval_step += 1
+            write_out("[MODEL EVAL: LEARNER]\t env_id: {}, Mean Reward: {}, std_dev: {}".format(env_id, model_mean, model_std))
+            write_out("[MODEL EVAL: BASELINE]\t env_id: {}, Mean Reward: {}, std_dev: {}".format(env_id, fresh_mean, fresh_std))
+            
+            pass_test = round(model_mean - model_std, 3) >= round(fresh_mean - fresh_std, 3)
+            if pass_test:
+                write_out("[TEST RESULT]\tmodel out-performs fresh model for env: {}, diff: {}".format(env_id,round(model_mean - model_std, 3) - round(fresh_mean - fresh_std, 3)))
             else:
-                print("[MODEL EVALUATION] model DID NOT out-perform fresh model for env: {}, old i: {}, new i: {}".format(env_id, i, 0))
+                write_out("[TEST RESULT]\tmodel DID NOT out-perform fresh model for env: {}, diff: {}".format(env_id,round(model_mean - model_std, 3) - round(fresh_mean - fresh_std, 3)))
                 return False
         return True
 
@@ -89,14 +107,16 @@ if __name__ == "__main__":
         env_id = env_ids[i]
         env, reward_env, eval_callback = init_env(env_id)
         model.set_env(env) 
-        print("[TRAINING] model is now learning env: {}".format(env_id))
+        write_out("[TRAINING: START]\tlearning env: {}".format(env_id))
         model.learn(total_timesteps=max_steps, callback=eval_callback)
-        model.save(model_dir + model_name)
         
         eval_env = make_env(env_id, 0)()
         mean_reward, std_reward = evaluate_policy(model, eval_env)
-        print("[TRAINING] Finished Learning ID: {}, Mean Reward: {}, std_dev: {}".format(env_id, mean_reward, std_reward))
-        if eval_model(model, i + 1):
+        write_out("[TRAINING: FINISH]\tID: {}, Mean Reward: {}, std_dev: {}".format(env_id, mean_reward, std_reward))
+        if eval_model(model, i):
+            model.save(model_dir + model_name)
+            with open(performance_file, 'w') as outfile:
+                json.dump(performance_data, outfile)
             i += 1
         else:
             i = 0
