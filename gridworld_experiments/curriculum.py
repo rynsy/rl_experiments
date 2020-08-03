@@ -2,7 +2,7 @@ import gym
 import gym_minigrid
 from gym_minigrid.wrappers import *
 
-import os, json
+import os, sys, json
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import tensorflow as tf
 tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
@@ -35,7 +35,7 @@ performance_data = {}
 performance_file = "training-output.json"
 output_file = "training-output.txt"
 eval_step = 0
-
+THRESHOLD = 0.9
 
 if __name__ == "__main__":
     def write_out(text):
@@ -67,12 +67,11 @@ if __name__ == "__main__":
         else:
             return env, reward_env, None
 
-    def eval_model(model, i):
-        global eval_step
-        success = True
+    def eval_model(model, test_env_id):
+        global eval_step, THRESHOLD
+        test_success, curriculum_success = True, True
         performance_data[eval_step] = {}
-        for j in range(i+1):
-            env_id = env_ids[j]
+        for env_id in env_ids:
             write_out("[MODEL EVAL]\tTesting learner on env: {}".format(env_id))
             env, eval_env, eval_callback = init_env(env_id)
 
@@ -89,40 +88,48 @@ if __name__ == "__main__":
                                             'baseline_training_steps'       : max_steps,
                                             'eval_episodes'                 : 100
                                             } 
-            write_out("[MODEL EVAL: LEARNER]\t env_id: {}, Mean Reward: {}, std_dev: {}".format(env_id, model_mean, model_std))
+            write_out("[MODEL EVAL: LEARNER] \t env_id: {}, Mean Reward: {}, std_dev: {}".format(env_id, model_mean, model_std))
             write_out("[MODEL EVAL: BASELINE]\t env_id: {}, Mean Reward: {}, std_dev: {}".format(env_id, fresh_mean, fresh_std))
             
             pass_test = round(model_mean - model_std, 3) >= round(fresh_mean - fresh_std, 3)
+            diff = abs(round(model_mean - model_std, 3) - round(fresh_mean - fresh_std, 3))
             if pass_test:
-                write_out("[TEST RESULT]\tmodel out-performs fresh model for env: {}, diff: {}".format(env_id,round(model_mean - model_std, 3) - round(fresh_mean - fresh_std, 3)))
+                write_out("[TEST RESULT]\tmodel out-performs fresh model for env: {}, diff: {}".format(env_id, diff))
             else:
-                write_out("[TEST RESULT]\tmodel DID NOT out-perform fresh model for env: {}, diff: {}".format(env_id,round(model_mean - model_std, 3) - round(fresh_mean - fresh_std, 3)))
-                success = False
+                write_out("[TEST RESULT]\tmodel DID NOT out-perform fresh model for env: {}, diff: {}".format(env_id, diff))
+                if env_id == test_env_id:
+                    test_success = False
+
+        curriculum_success = sum([performance_data[eval_step][env_id]['baseline_mean'] > THRESHOLD for env_id in env_ids]) == len(env_ids)
         eval_step += 1
-        return success
+        return test_success, curriculum_success
 
     i = 0
     env_id = env_ids[i]
     env, reward_env, eval_callback = init_env(env_id)
     if not pretrained:
-        model = A2C(CnnPolicy, env, verbose=verbose, tensorboard_log=log_dir)
+        model = A2C(CnnPolicy, env, verbose=verbose)
     else:
         model = A2C.load(pretrained_model)
 
-    while i < len(env_ids):
-        env_id = env_ids[i]
+    curriculum_learned = False
+    while i < len(env_ids) or not curriculum_learned:
+        env_id = env_ids[i % len(env_ids)]
         env, reward_env, eval_callback = init_env(env_id)
         model.set_env(env) 
         write_out("[TRAINING: START]\tlearning env: {}".format(env_id))
         model.learn(total_timesteps=max_steps, callback=eval_callback)
-        
         eval_env = make_env(env_id, 0)()
         mean_reward, std_reward = evaluate_policy(model, eval_env)
         write_out("[TRAINING: FINISH]\tID: {}, Mean Reward: {}, std_dev: {}".format(env_id, mean_reward, std_reward))
-        if eval_model(model, i):
+        test_res, curriculum_learned = eval_model(model, env_id)
+        if test_res:
             model.save(data_dir + model_name)
             with open(data_dir + performance_file, 'w') as outfile:
                 json.dump(performance_data, outfile)
             i += 1
+        elif curriculum_learned:
+            write_out("[SUCCESS]\t\tSuccessfully learned the full curriculum, model beating reward threshold on all environments")
+            sys.exit(0)
         else:
             i = 0
