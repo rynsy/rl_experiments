@@ -5,7 +5,7 @@ mmcv==0.5.9
 opencv-python==4.2.0.34
 mpi4py==3.0.3
 gym-minigrid==1.0.1
-tensorflow==1.14.0
+tensorflow==2.5.0
 tensorflow-estimator==1.15.1
 tensorflow-gpu==1.15.0
 gym==0.17.2
