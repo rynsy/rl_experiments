@@ -4,6 +4,6 @@ pandas==0.25.3
 mmcv==0.5.9
 opencv-python==4.2.0.34
 mpi4py==3.0.3
-tensorflow-gpu==1.15
+tensorflow-gpu==2.5.1
 tensorflow==1.14.0
 tensorflow-estimator==1.15.1
