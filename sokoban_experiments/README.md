@@ -1,8 +1,15 @@
-# Experiments in game-playing with Deep Reinforcement Learning
+# Experiments playing Sokoban with Deep Reinforcement Learning
 
-This repo is a bunch of experiments for an independent study, mostly to keep all of my 
-experiments/code/papers in one place. All models/learning is done with Stable Baselines, 
-and trained on OpenAI Gym environments.
+This repo is a bunch of experiments for an independent study. Eventually, this will turn into 
+an app to learn and play an OpenAI Gym implementation of Sokoban. 
+
+Things to try out:
+* Use a tree search method and train a DNN to learn the heuristic for Sokoban. Could use existing heuristics/algorithms for imitation learning.
+* Try Q-map method:  [Scaling All-Goals updates in Reinforcement Learning using CNNs](http://kormushev.com/papers/Pardo_AAAI-2020.pdf) 
+
+Gym Environments:
+* [gym-sokoban (for level playing)](https://github.com/mpSchrader/gym-sokoban)
+* [gym-pcgrl (for level generation)](https://github.com/amidos2006/gym-pcgrl)
 
 Relevant reading:
 * [Learning Generalized Reactive Policies using Deep Neural Networks](https://arxiv.org/pdf/1708.07280.pdf)
