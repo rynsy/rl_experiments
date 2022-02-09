@@ -7,7 +7,7 @@ mpi4py==3.0.3
 gym-minigrid==1.0.1
 tensorflow==1.14.0
 tensorflow-estimator==1.15.1
-tensorflow-gpu==1.15.0
+tensorflow-gpu==2.5.3
 gym==0.17.2
 gym-minigrid==1.0.1
 numpy==1.18.1
