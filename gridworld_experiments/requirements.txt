@@ -10,4 +10,4 @@ tensorflow-estimator==1.15.1
 tensorflow-gpu==1.15.0
 gym==0.17.2
 gym-minigrid==1.0.1
-numpy==1.18.1
+numpy==1.22.0
